@@ -69,11 +69,11 @@ if process_type == "GNOM":
             # Przejście do stanu INSECTION
             if ac >= G:
                 current_state = "INSECTION"
-
-            # Przejście do stanu WAIT
-            ack_counter = 0
-            comm.bcast("gREQ", root=rank)
-            current_state = "WAIT"
+            else:
+                # Przejście do stanu WAIT
+                ack_counter = 0
+                comm.bcast("gREQ", root=rank) # Wysyłka do każdego procesu
+                current_state = "WAIT"
 
         if current_state == "WAIT":
             messages = get_messages()
@@ -85,7 +85,7 @@ if process_type == "GNOM":
                     continue
 
                 elif message_type == "qREQ":
-                    # TO DO
+                    # TO DO - dodaj zegar Lamporta
 
                 elif message_type == "ACK":
                     ack_counter += 1
@@ -102,9 +102,9 @@ if process_type == "GNOM":
 
         if current_state == "INSECTION":
             ac -= 1
-            comm.bcast("gREQ", root=rank)
+            comm.bcast("gCHG", root=rank)
 
-            messages = get_messages()
+            messages = get_messages() # Może być problem, że jak program przejdzie do linijni niżej i dostanie wiadomość to skucha, bo jej nie uwzględnij
             for message in messages:
                 message_author = message[0]
                 message_type = message[1]
@@ -157,11 +157,11 @@ elif process_type == "SKRZAT":
             # Przejście do stanu INSECTION
             if b >= S:
                 current_state = "INSECTION"
-
-            # Przejście do stanu WAIT
-            ack_counter = 0
-            comm.bcast("sREQ", root=rank)
-            current_state = "WAIT"
+            else:
+                # Przejście do stanu WAIT
+                ack_counter = 0
+                comm.bcast("sREQ", root=rank)
+                current_state = "WAIT"
 
         if current_state == "WAIT":
             messages = get_messages()
@@ -190,7 +190,7 @@ elif process_type == "SKRZAT":
 
         if current_state == "INSECTION":
             b -= 1
-            comm.bcast("sREQ", root=rank)
+            comm.bcast("sCHG", root=rank)
 
             messages = get_messages()
             for message in messages:
