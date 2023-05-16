@@ -100,3 +100,26 @@ Proces przebywa w sekcji krytycznej do czasu podjęcia decyzji o jej opuszczeniu
 - ACK: ignoruje (sytuacja niemożliwa)
 - sCHG: zmniejsza wartość *b*
 - gCHG: zwiększa wartość *b*
+
+## Program
+### Uruchomienie programu
+Program uruchamiamy z poziomu terminala wpisując:
+```
+mpiexec -n [liczba_procesów] python main.py [liczba gnomów] [liczba skrzatów]
+```
+
+Przykład:
+```
+mpiexec -n 5 python main.py 3 2
+```
+
+Należy pamiętać, że liczba procesów musi się równać sumie liczby gnomów i skrzatów.
+
+### Biblioteki
+Przed uruchmieniem programu należy zainstalować biblioteki:
+- mpi4py - biblioteka użyta do działania programu w trybie rozproszonym
+- colorama - biblioteka użyta do wyświetlania komunikatów w różnych kolorach
+```
+pip install mpi4py
+pip install colorama
+```
