@@ -1,11 +1,14 @@
 from mpi4py import MPI
+import colorama
+from colorama import Fore
 
-def get_messages(comm, size):
+def get_messages(comm, rank, size):
     messages = []
     for i in range(size):
         status = MPI.Status()
         if comm.iprobe(source=i, status=status):
             message = comm.recv(source=i)
+            print(f"[SKRZAT:{rank}] Otrzymałem wiadomość {message} od {i}")
             messages.append((status.Get_source(), message))
     return messages
 
@@ -19,9 +22,16 @@ def skrzat_code(comm, S, b):
     rank = comm.Get_rank()
     size = comm.Get_size()
 
+    # Ustawianie koloru tekstów
+    colorama.init()
+    available_colors = [Fore.RED, Fore.GREEN, Fore.BLUE, Fore.YELLOW, Fore.MAGENTA, Fore.CYAN]
+    print(available_colors[rank % len(available_colors)], end='')
+
     while True:
         if current_state == "REST":
-            messages = get_messages(comm, size)
+            print(f"[SKRZAT:{rank}] Jestem w stanie REST")
+            messages = get_messages(comm, rank, size)
+
             for message in messages:
                 message_author = message[0]
                 message_type = message[1]
@@ -31,6 +41,7 @@ def skrzat_code(comm, S, b):
 
                 elif message_type == "sREQ":
                     comm.send("ACK", dest=message_author)
+                    print(f"[SKRZAT:{rank}] Odsyłam wiadomość ACK do {message_author}")
 
                 elif message_type == "ACK":
                     continue
@@ -51,7 +62,8 @@ def skrzat_code(comm, S, b):
                 current_state = "WAIT"
 
         if current_state == "WAIT":
-            messages = get_messages(comm, size)
+            print(f"[SKRZAT:{rank}] Jestem w stanie WAIT")
+            messages = get_messages(comm, rank, size)
             for message in messages:
                 message_author = message[0]
                 message_type = message[1]
@@ -76,10 +88,12 @@ def skrzat_code(comm, S, b):
                 current_state = "INSECTION"
 
         if current_state == "INSECTION":
+            print(f"[SKRZAT:{rank}] Jestem w stanie INSECTION")
             b -= 1
             comm.bcast("sCHG", root=rank)
+            print(f"[SKRZAT:{rank}] Wysyłam wiadomość sCHG do wszystkich procesów")
 
-            messages = get_messages(comm, size)
+            messages = get_messages(comm, rank, size)
             for message in messages:
                 message_author = message[0]
                 message_type = message[1]
@@ -102,5 +116,6 @@ def skrzat_code(comm, S, b):
             # Przejście do stanu REST
             for target_rank in wait_queue:
                 comm.send("ACK", dest=target_rank)
+                print(f"[SKRZAT:{rank}] Wysyłam wiadomość ACK do {target_rank}")
             wait_queue = []
             current_state = "REST"
