@@ -27,10 +27,13 @@ if __name__ == "__main__":
             exit("Liczba Skrzatów i Gnomów jest niezgodna")
         else:
             exit(-1)
-    if rank < G:
+
+    if rank < S:
+        # Program dla skrzata
         from skrzat import skrzat_code
         skrzat_code(comm=comm, S=S, b=b)
     else:
+        # Program dla gnoma
         from gnom import gnome_code
         gnome_code(comm=comm, G=G, ac=ac)
 

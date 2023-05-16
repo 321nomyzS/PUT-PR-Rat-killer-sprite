@@ -30,7 +30,8 @@ def skrzat_code(comm, S, b):
     while True:
         if current_state == "REST":
             print(f"[SKRZAT:{rank}] Jestem w stanie REST")
-            messages = get_messages(comm, rank, size)
+            messages = get_messages(comm, rank, size) # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
+            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
 
             for message in messages:
                 message_author = message[0]
@@ -63,7 +64,9 @@ def skrzat_code(comm, S, b):
 
         if current_state == "WAIT":
             print(f"[SKRZAT:{rank}] Jestem w stanie WAIT")
-            messages = get_messages(comm, rank, size)
+            messages = get_messages(comm, rank, size) # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
+            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
+
             for message in messages:
                 message_author = message[0]
                 message_type = message[1]
@@ -72,7 +75,7 @@ def skrzat_code(comm, S, b):
                     continue
 
                 elif message_type == "sREQ":
-                # TO DO
+                    # TO DO: Wykorzystać zegar Lamporta w wysyłaniu i odbieraniu wiadomości
 
                 elif message_type == "ACK":
                     ack_counter += 1
@@ -93,7 +96,9 @@ def skrzat_code(comm, S, b):
             comm.bcast("sCHG", root=rank)
             print(f"[SKRZAT:{rank}] Wysyłam wiadomość sCHG do wszystkich procesów")
 
-            messages = get_messages(comm, rank, size)
+            messages = get_messages(comm, rank, size) # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
+            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
+
             for message in messages:
                 message_author = message[0]
                 message_type = message[1]

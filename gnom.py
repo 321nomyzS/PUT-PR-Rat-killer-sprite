@@ -30,7 +30,8 @@ def gnome_code(comm, G, ac):
     while True:
         if current_state == "REST":
             print(f"[GNOM:{rank}] Jestem w stanie REST")
-            messages = get_messages(comm, rank, size)
+            messages = get_messages(comm, rank, size) # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
+            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
 
             for message in messages:
                 message_author = message[0]
@@ -63,7 +64,9 @@ def gnome_code(comm, G, ac):
 
         if current_state == "WAIT":
             print(f"[GNOM:{rank}] Jestem w stanie WAIT")
-            messages = get_messages(comm, rank, size)
+            messages = get_messages(comm, rank, size) # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
+            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
+
             for message in messages:
                 message_author = message[0]
                 message_type = message[1]
@@ -72,7 +75,7 @@ def gnome_code(comm, G, ac):
                     continue
 
                 elif message_type == "qREQ":
-                # TO DO - dodaj zegar Lamporta
+                    # TO DO: Wykorzystać zegar Lamporta w wysyłaniu i odbieraniu wiadomości
 
                 elif message_type == "ACK":
                     ack_counter += 1
@@ -93,7 +96,9 @@ def gnome_code(comm, G, ac):
             comm.bcast("gCHG", root=rank)
             print(f"[GNOM:{rank}] Wysyłam wiadomość gCHG do wszystkich procesów")
 
-            messages = get_messages(comm, rank, size)  # Może być problem, że jak program przejdzie do linijni niżej i dostanie wiadomość to skucha, bo jej nie uwzględnij
+            messages = get_messages(comm, rank, size)  # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
+            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
+
             for message in messages:
                 message_author = message[0]
                 message_type = message[1]
