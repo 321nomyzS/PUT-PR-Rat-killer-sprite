@@ -1,7 +1,24 @@
 from mpi4py import MPI
-import colorama
-from colorama import Fore
 import time
+
+def color_print_skrzat(text, rank, lamport_clock):
+    colors = [
+        '\033[31m',
+        '\033[32m',
+        '\033[34m',
+        '\033[0m',
+        '\033[33m',
+        '\033[36m',
+        '\033[35m',
+        '\033[37m',
+        '\033[90m',
+        '\033[92m',
+        '\033[96m',
+        '\033[91m',
+        '\033[95m'
+    ]
+    print(f"{colors[rank % len(colors)]}[SKRZAT:{rank} | {lamport_clock}] {text}")
+
 
 def get_messages(comm, rank, lamport):
     messages = []
@@ -10,11 +27,12 @@ def get_messages(comm, rank, lamport):
         #sprawdź czy jest wiadomosc do odebrania od obojętnie kogo. Jak jest, to zapisz o niej informacje w 'status'
         if comm.iprobe(source=MPI.ANY_SOURCE, status=status): 
             message = comm.recv(source=status.Get_source())
-            print(f"[SKRZAT:{rank}|{lamport}] Otrzymalem wiadomosc {message} od {status.Get_source()}")
+            color_print_skrzat(f"Otrzymalem wiadomosc {message} od {status.Get_source()}", rank, lamport)
             messages.append((status.Get_source(), message))
         else:
             break
     return messages
+
 
 def skrzat_code(comm, S, b):
     # Ustawianie zmiennych i struktur lokalnych
@@ -28,14 +46,9 @@ def skrzat_code(comm, S, b):
 
     lamport_clock = 0
 
-    # Ustawianie koloru tekstow
-    colorama.init()
-    available_colors = [Fore.RED, Fore.GREEN, Fore.BLUE, Fore.YELLOW, Fore.MAGENTA, Fore.CYAN]
-    print(available_colors[rank % len(available_colors)], end='')
-
     while True:
         if current_state == "REST":
-            print(f"[SKRZAT:{rank}|{lamport_clock}] Jestem w stanie REST")
+            color_print_skrzat(f"Jestem w stanie REST", rank, lamport_clock)
             messages = get_messages(comm, rank, lamport_clock)
 
             for message in messages:
@@ -46,7 +59,7 @@ def skrzat_code(comm, S, b):
                     continue
 
                 elif message_type == "sREQ":
-                    print(f"[SKRZAT:{rank}|{lamport_clock}] Odsylam wiadomosc ACK do {message_author}")
+                    color_print_skrzat(f"Odsylam wiadomosc ACK do {message_author}", rank, lamport_clock)
                     comm.send("ACK", dest=message_author)
 
                 elif message_type == "ACK":
@@ -54,11 +67,11 @@ def skrzat_code(comm, S, b):
 
                 elif message_type == "sCHG":
                     b -= 1
-                    print(f"[SKRZAT:{rank}|{lamport_clock}] Zmniejszam b, teraz jest {b}")
+                    color_print_skrzat(f"Zmniejszam b, teraz jest {b}", rank, lamport_clock)
 
                 elif message_type == "gCHG":
                     b += 1
-                    print(f"[SKRZAT:{rank}|{lamport_clock}] Zwiekszam b, teraz jest {b}")
+                    color_print_skrzat(f"Zwiekszam b, teraz jest {b}", rank, lamport_clock)
 
             # Przejście do stanu INSECTION
             if b >= S:
@@ -67,7 +80,7 @@ def skrzat_code(comm, S, b):
                 # Przejście do stanu WAIT
                 ack_counter = 0
                 lamport_clock += 1
-                print(f"[SKRZAT:{rank}|{lamport_clock}] Wysylam wiadomosc sREQ do wszystkich procesow")
+                color_print_skrzat(f"Wysylam wiadomosc sREQ do wszystkich procesow", rank, lamport_clock)
                 for i in range(size):
                     if i != rank:
                         comm.send(f"sREQ {lamport_clock}", dest=i)
@@ -75,7 +88,7 @@ def skrzat_code(comm, S, b):
                 current_state = "WAIT"
 
         if current_state == "WAIT":
-            print(f"[SKRZAT:{rank}|{lamport_clock}] Jestem w stanie WAIT")
+            color_print_skrzat(f"Jestem w stanie WAIT", rank, lamport_clock)
             
             while ack_counter < S - b:
                 messages = get_messages(comm, rank, lamport_clock)
@@ -90,7 +103,7 @@ def skrzat_code(comm, S, b):
                     elif message_type == "sREQ":
                         message_clock = int(message[1].split()[1])
                         if lamport_clock <= message_clock:
-                            print(f"[SKRZAT:{rank}|{lamport_clock}] Odsylam wiadomosc ACK do {message_author}")
+                            color_print_skrzat(f"Odsylam wiadomosc ACK do {message_author}", rank, lamport_clock)
                             lamport_clock = message_clock + 1
                             comm.send("ACK", dest=message_author)
                         else:
@@ -102,20 +115,20 @@ def skrzat_code(comm, S, b):
 
                     elif message_type == "sCHG":
                         b -= 1
-                        print(f"[SKRZAT:{rank}|{lamport_clock}] Zmniejszam b, teraz jest {b}")
+                        color_print_skrzat(f"Zmniejszam b, teraz jest {b}", rank, lamport_clock)
 
                     elif message_type == "gCHG":
                         b += 1
-                        print(f"[SKRZAT:{rank}|{lamport_clock}] Zwiekszam b, teraz jest {b}")
+                        color_print_skrzat(f"Zwiekszam b, teraz jest {b}", rank, lamport_clock)
 
                 # Przejście do stanu INSECTION
                 # if ack_counter >= S - b:
             current_state = "INSECTION"
 
         if current_state == "INSECTION":
-            print(f"[SKRZAT:{rank}|{lamport_clock}] Jestem w stanie INSECTION")
+            color_print_skrzat(f"Jestem w stanie INSECTION", rank, lamport_clock)
             b -= 1
-            print(f"[SKRZAT:{rank}|{lamport_clock}] Zmniejszam b, teraz jest {b} i wysylam wiadomosc sCHG do wszystkich procesow")
+            color_print_skrzat(f"Zmniejszam b, teraz jest {b} i wysylam wiadomosc sCHG do wszystkich procesow", rank, lamport_clock)
             for i in range(size):
                 if i != rank:
                     comm.send(f"sCHG", dest=i)
@@ -138,15 +151,15 @@ def skrzat_code(comm, S, b):
 
                 elif message_type == "sCHG":
                     b -= 1
-                    print(f"[SKRZAT:{rank}|{lamport_clock}] Zmniejszam b, teraz jest {b}")
+                    color_print_skrzat(f"Zmniejszam b, teraz jest {b}", rank, lamport_clock)
 
                 elif message_type == "gCHG":
                     b += 1
-                    print(f"[SKRZAT:{rank}|{lamport_clock}] Zwiekszam b, teraz jest {b}")
+                    color_print_skrzat(f"Zwiekszam b, teraz jest {b}", rank, lamport_clock)
 
             # Przejście do stanu REST
             for target_rank in wait_queue:
-                print(f"[SKRZAT:{rank}|{lamport_clock}] Wysylam wiadomosc ACK do {target_rank} znajdujacego sie w poczekalni")
+                color_print_skrzat(f"Wysylam wiadomosc ACK do {target_rank} znajdujacego sie w poczekalni", rank, lamport_clock)
                 comm.send("ACK", dest=target_rank)
             wait_queue = []
             current_state = "REST"
