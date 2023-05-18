@@ -24,7 +24,7 @@ if __name__ == "__main__":
     S = int(sys.argv[2])
     if G + S != size:
         if rank == 0:
-            exit("Liczba Skrzatów i Gnomów jest niezgodna")
+            exit("Liczba Skrzatow i Gnomow jest niezgodna")
         else:
             exit(-1)
 

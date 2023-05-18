@@ -3,13 +3,13 @@ import colorama
 from colorama import Fore
 import time
 
-def get_messages(comm, rank, size):
+def get_messages(comm, rank, lamport):
     messages = []
     while True:
         status = MPI.Status()
         if comm.iprobe(source=MPI.ANY_SOURCE, status=status):
             message = comm.recv(source=status.Get_source())
-            print(f"[GNOM:{rank}] Otrzymalem wiadomosc {message} od {status.Get_source()}")
+            print(f"[GNOM:{rank}|{lamport}] Otrzymalem wiadomosc {message} od {status.Get_source()}")
             messages.append((status.Get_source(), message))
         else:
             break
@@ -35,7 +35,7 @@ def gnome_code(comm, G, ac):
     while True:
         if current_state == "REST":
             print(f"[GNOM:{rank}|{lamport_clock}] Jestem w stanie REST")
-            messages = get_messages(comm, rank, size) 
+            messages = get_messages(comm, rank, lamport_clock) 
             
             for message in messages:
                 message_author = message[0]
@@ -77,7 +77,7 @@ def gnome_code(comm, G, ac):
             print(f"[GNOM:{rank}|{lamport_clock}] Jestem w stanie WAIT")
             
             while ack_counter < G - ac:
-                messages = get_messages(comm, rank, size)
+                messages = get_messages(comm, rank, lamport_clock)
                 for message in messages:
                     message_author = message[0]
                     message_type = message[1].split()[0]
@@ -88,8 +88,8 @@ def gnome_code(comm, G, ac):
                     elif message_type == "gREQ":
                         message_clock = int(message[1].split()[1])
                         if lamport_clock <= message_clock:
-                            lamport_clock = message_clock + 1
                             print(f"[GNOM:{rank}|{lamport_clock}] Odsylam wiadomosc ACK do {message_author}")
+                            lamport_clock = message_clock + 1
                             comm.send("ACK", dest=message_author)
                         else:
                             lamport_clock += 1
@@ -105,6 +105,7 @@ def gnome_code(comm, G, ac):
                     elif message_type == "sCHG":
                         ac += 1
                         print(f"[GNOM:{rank}|{lamport_clock}] Zwiekszam ac, teraz jest {ac}")
+                time.sleep(1)        
 
             # Przejście do stanu INSECTION
             current_state = "INSECTION"
@@ -119,7 +120,7 @@ def gnome_code(comm, G, ac):
                     comm.send(f"gCHG", dest=i)
             # comm.bcast("gCHG", root=rank)
 
-            messages = get_messages(comm, rank, size)  
+            messages = get_messages(comm, rank, lamport_clock)  
 
             for message in messages:
                 message_author = message[0]
