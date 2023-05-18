@@ -110,7 +110,7 @@ mpiexec -n [liczba_procesów] python main.py [liczba gnomów] [liczba skrzatów]
 
 Przykład:
 ```
-mpiexec -n 5 python main.py 3 2
+mpiexec -n 5 python -B main.py 3 2
 ```
 
 Należy pamiętać, że liczba procesów musi się równać sumie liczby gnomów i skrzatów.
