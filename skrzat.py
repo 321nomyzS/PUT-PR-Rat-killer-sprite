@@ -1,15 +1,18 @@
 from mpi4py import MPI
 import colorama
 from colorama import Fore
+import time
 
 def get_messages(comm, rank, size):
     messages = []
     while True:
         status = MPI.Status()
-        #sprawdź czy jest wiadomość do odebrania od obojętnie kogo. Jak jest, to zapisz o niej informacje w 'status'
-        if comm.iprobe(source=MPI.ANY_SOURCE, status=status): 
-            message = comm.recv(source=status.Get_source())
-            print(f"[GNOM:{rank}] Otrzymałem wiadomość {message} od {status.Get_source()}")
+        # print(f"comm: {comm} rank: {rank}")
+        #sprawdź czy jest wiadomosc do odebrania od obojętnie kogo. Jak jest, to zapisz o niej informacje w 'status'
+        if comm.iprobe(source=MPI.ANY_SOURCE): #, tag=MPI.ANY_TAG, status=status
+            # print(f"Test {status.Get_source()}")
+            message = comm.recv(source=MPI.ANY_SOURCE, status=status)
+            print(f"[SKRZAT:{rank}] Otrzymalem wiadomosc {message} od {status.Get_source()}")
             messages.append((status.Get_source(), message))
         else:
             break
@@ -21,7 +24,7 @@ def get_messages(comm, rank, size):
     #     #if comm.iprobe(source=i):
     #     message = comm.recv(source=i)
     #     if message is not None:
-    #         print(f"[SKRZAT:{rank}] Otrzymałem wiadomość {message} od {i}")
+    #         print(f"[SKRZAT:{rank}] Otrzymalem wiadomosc {message} od {i}")
     #         messages.append((i, message))
     # return messages
 
@@ -37,7 +40,7 @@ def skrzat_code(comm, S, b):
 
     lamport_clock = 0
 
-    # Ustawianie koloru tekstów
+    # Ustawianie koloru tekstow
     colorama.init()
     available_colors = [Fore.RED, Fore.GREEN, Fore.BLUE, Fore.YELLOW, Fore.MAGENTA, Fore.CYAN]
     print(available_colors[rank % len(available_colors)], end='')
@@ -46,7 +49,7 @@ def skrzat_code(comm, S, b):
         if current_state == "REST":
             print(f"[SKRZAT:{rank}|{lamport_clock}] Jestem w stanie REST")
             messages = get_messages(comm, rank, size) # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
-            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
+            # Możliwe, że wiadomosc dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomosc nie zostanie uwzględniona
 
             for message in messages:
                 message_author = message[0]
@@ -57,7 +60,7 @@ def skrzat_code(comm, S, b):
 
                 elif message_type == "sREQ":
                     comm.send("ACK", dest=message_author)
-                    print(f"[SKRZAT:{rank}|{lamport_clock}] Odsyłam wiadomość ACK do {message_author}")
+                    print(f"[SKRZAT:{rank}|{lamport_clock}] Odsylam wiadomosc ACK do {message_author}")
 
                 elif message_type == "ACK":
                     continue
@@ -75,16 +78,20 @@ def skrzat_code(comm, S, b):
                 # Przejście do stanu WAIT
                 ack_counter = 0
                 lamport_clock += 1
-                comm.bcast(f"sREQ {lamport_clock}", root=rank)
+                for i in range(size):
+                    if i != rank:
+                        comm.send(f"sREQ {lamport_clock}", dest=i)
+                # comm.bcast(f"sREQ {lamport_clock}", root=rank)
                 current_state = "WAIT"
 
         if current_state == "WAIT":
             print(f"[SKRZAT:{rank}|{lamport_clock}] Jestem w stanie WAIT")
             # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
-            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
+            # Możliwe, że wiadomosc dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomosc nie zostanie uwzględniona
 
             while ack_counter < S - b:
                 messages = get_messages(comm, rank, size)
+
                 for message in messages:
                     message_author = message[0]
                     message_type = message[1].split()[0]
@@ -117,11 +124,14 @@ def skrzat_code(comm, S, b):
         if current_state == "INSECTION":
             print(f"[SKRZAT:{rank}|{lamport_clock}] Jestem w stanie INSECTION")
             b -= 1
-            comm.bcast("sCHG", root=rank)
-            print(f"[SKRZAT:{rank}|{lamport_clock}] Wysyłam wiadomość sCHG do wszystkich procesów")
+            print(f"[SKRZAT:{rank}|{lamport_clock}] Wysylam wiadomosc sCHG do wszystkich procesow")
+            for i in range(size):
+                if i != rank:
+                    comm.send(f"sCHG", dest=i)
+            # comm.bcast("sCHG", root=rank)
 
             messages = get_messages(comm, rank, size) # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
-            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
+            # Możliwe, że wiadomosc dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomosc nie zostanie uwzględniona
 
             for message in messages:
                 message_author = message[0]
@@ -145,6 +155,7 @@ def skrzat_code(comm, S, b):
             # Przejście do stanu REST
             for target_rank in wait_queue:
                 comm.send("ACK", dest=target_rank)
-                print(f"[SKRZAT:{rank}|{lamport_clock}] Wysyłam wiadomość ACK do {target_rank}")
+                print(f"[SKRZAT:{rank}|{lamport_clock}] Wysylam wiadomosc ACK do {target_rank}")
             wait_queue = []
             current_state = "REST"
+            time.sleep(1)

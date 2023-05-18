@@ -1,6 +1,7 @@
 from mpi4py import MPI
 import colorama
 from colorama import Fore
+import time
 
 def get_messages(comm, rank, size):
     messages = []
@@ -8,7 +9,7 @@ def get_messages(comm, rank, size):
         status = MPI.Status()
         if comm.iprobe(source=MPI.ANY_SOURCE, status=status):
             message = comm.recv(source=status.Get_source())
-            print(f"[GNOM:{rank}] Otrzymałem wiadomość {message} od {status.Get_source()}")
+            print(f"[GNOM:{rank}] Otrzymalem wiadomosc {message} od {status.Get_source()}")
             messages.append((status.Get_source(), message))
         else:
             break
@@ -26,7 +27,7 @@ def gnome_code(comm, G, ac):
 
     lamport_clock = 0
 
-    # Ustawianie koloru tekstów
+    # Ustawianie koloru tekstow
     colorama.init()
     available_colors = [Fore.RED, Fore.GREEN, Fore.BLUE, Fore.YELLOW, Fore.MAGENTA, Fore.CYAN]
     print(available_colors[rank % len(available_colors)], end='')
@@ -44,17 +45,19 @@ def gnome_code(comm, G, ac):
                     continue
 
                 elif message_type == "gREQ":
+                    print(f"[GNOM:{rank}|{lamport_clock}] Odsylam wiadomosc ACK do {message_author}")
                     comm.send("ACK", dest=message_author)
-                    print(f"[GNOM:{rank}] Odsyłam wiadomość ACK do {message_author}")
 
                 elif message_type == "ACK":
                     continue
 
                 elif message_type == "gCHG":
                     ac -= 1
+                    print(f"[GNOM:{rank}|{lamport_clock}] Zmniejszam ac, teraz jest {ac}")
 
                 elif message_type == "sCHG":
                     ac += 1
+                    print(f"[GNOM:{rank}|{lamport_clock}] Zwiekszam ac, teraz jest {ac}")
 
             # Przejście do stanu INSECTION
             if ac >= G:
@@ -63,7 +66,11 @@ def gnome_code(comm, G, ac):
                 # Przejście do stanu WAIT
                 ack_counter = 0
                 lamport_clock += 1 
-                comm.bcast(f"gREQ {lamport_clock}", root=rank)  # Wysyłka do każdego procesu
+                print(f"[GNOM:{rank}|{lamport_clock}] Wysylam wiadomosc gREQ do wszystkich procesow")
+                for i in range(size):
+                    if i != rank:
+                        comm.send(f"gREQ {lamport_clock}", dest=i)
+                # comm.bcast(f"gREQ {lamport_clock}", root=rank)  # Wysylka do każdego procesu
                 current_state = "WAIT"
 
         if current_state == "WAIT":
@@ -82,6 +89,7 @@ def gnome_code(comm, G, ac):
                         message_clock = int(message[1].split()[1])
                         if lamport_clock <= message_clock:
                             lamport_clock = message_clock + 1
+                            print(f"[GNOM:{rank}|{lamport_clock}] Odsylam wiadomosc ACK do {message_author}")
                             comm.send("ACK", dest=message_author)
                         else:
                             lamport_clock += 1
@@ -92,9 +100,11 @@ def gnome_code(comm, G, ac):
 
                     elif message_type == "gCHG":
                         ac -= 1
+                        print(f"[GNOM:{rank}|{lamport_clock}] Zmniejszam ac, teraz jest {ac}")
 
                     elif message_type == "sCHG":
                         ac += 1
+                        print(f"[GNOM:{rank}|{lamport_clock}] Zwiekszam ac, teraz jest {ac}")
 
             # Przejście do stanu INSECTION
             current_state = "INSECTION"
@@ -102,8 +112,12 @@ def gnome_code(comm, G, ac):
         if current_state == "INSECTION":
             print(f"[GNOM:{rank}|{lamport_clock}] Jestem w stanie INSECTION")
             ac -= 1
-            comm.bcast("gCHG", root=rank)
-            print(f"[GNOM:{rank}|{lamport_clock}] Wysyłam wiadomość gCHG do wszystkich procesów")
+            print(f"[GNOM:{rank}|{lamport_clock}] Zmniejszam ac, teraz jest {ac}. Wysylam wiadomosc gCHG do wszystkich procesow")
+            # print(f"[GNOM:{rank}|{lamport_clock}] Wysylam wiadomosc gCHG do wszystkich procesow")
+            for i in range(size):
+                if i != rank:
+                    comm.send(f"gCHG", dest=i)
+            # comm.bcast("gCHG", root=rank)
 
             messages = get_messages(comm, rank, size)  
 
@@ -122,13 +136,16 @@ def gnome_code(comm, G, ac):
 
                 elif message_type == "gCHG":
                     ac -= 1
+                    print(f"[GNOM:{rank}|{lamport_clock}] Zmniejszam ac, teraz jest {ac}")
 
                 elif message_type == "sCHG":
                     ac += 1
+                    print(f"[GNOM:{rank}|{lamport_clock}] Zwiekszam ac, teraz jest {ac}")
 
             # Przejście do stanu REST
             for target_rank in wait_queue:
+                print(f"[GNOM:{rank}|{lamport_clock}] Wysylam wiadomosc ACK do {target_rank} znajdujacego sie w poczekalni")
                 comm.send("ACK", dest=target_rank)
-                print(f"[GNOM:{rank}|{lamport_clock}] Wysyłam wiadomość ACK do {target_rank}")
             wait_queue = []
             current_state = "REST"
+            time.sleep(1)

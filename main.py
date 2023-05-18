@@ -9,7 +9,7 @@ import sys
 '''
 
 # Ustawanie początkowych wartości ac oraz b
-ac = 5
+ac = 2
 b = 1
 
 
