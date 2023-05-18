@@ -17,6 +17,7 @@ def skrzat_code(comm, S, b):
     wait_queue = []
     ack_counter = 0
     current_state = "REST"
+    lamport_clock = 0
 
     # Ustawienia MPI
     rank = comm.Get_rank()
@@ -35,7 +36,7 @@ def skrzat_code(comm, S, b):
 
             for message in messages:
                 message_author = message[0]
-                message_type = message[1]
+                message_type = message[1].split()[0]
 
                 if message_type == "gREQ":
                     continue
@@ -59,7 +60,8 @@ def skrzat_code(comm, S, b):
             else:
                 # Przejście do stanu WAIT
                 ack_counter = 0
-                comm.bcast("sREQ", root=rank)
+                lamport_clock += 1
+                comm.bcast(f"sREQ {lamport_clock}", root=rank)
                 current_state = "WAIT"
 
         if current_state == "WAIT":
@@ -69,13 +71,19 @@ def skrzat_code(comm, S, b):
 
             for message in messages:
                 message_author = message[0]
-                message_type = message[1]
+                message_type = message[1].split()[0]
 
                 if message_type == "gREQ":
                     continue
 
                 elif message_type == "sREQ":
-                    # TO DO: Wykorzystać zegar Lamporta w wysyłaniu i odbieraniu wiadomości
+                    message_clock = int(message[1].split()[1])
+                    if lamport_clock < message_clock:
+                        lamport_clock = message_clock + 1
+                        comm.send("ACK", dest=message_author)
+                    else:   
+                        lamport_clock += 1 
+                        wait_queue.append(message_author)
 
                 elif message_type == "ACK":
                     ack_counter += 1
@@ -101,7 +109,7 @@ def skrzat_code(comm, S, b):
 
             for message in messages:
                 message_author = message[0]
-                message_type = message[1]
+                message_type = message[1].split()[0]
 
                 if message_type == "gREQ":
                     continue

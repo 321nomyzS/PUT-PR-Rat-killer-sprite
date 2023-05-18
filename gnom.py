@@ -17,6 +17,7 @@ def gnome_code(comm, G, ac):
     wait_queue = []
     ack_counter = 0
     current_state = "REST"
+    lamport_clock = 0
 
     # Ustawienia MPI
     rank = comm.Get_rank()
@@ -35,12 +36,12 @@ def gnome_code(comm, G, ac):
 
             for message in messages:
                 message_author = message[0]
-                message_type = message[1]
+                message_type = message[1].split()[0]
 
                 if message_type == "sREQ":
                     continue
 
-                elif message_type == "qREQ":
+                elif message_type == "gREQ":
                     comm.send("ACK", dest=message_author)
                     print(f"[GNOM:{rank}] Odsyłam wiadomość ACK do {message_author}")
 
@@ -59,7 +60,8 @@ def gnome_code(comm, G, ac):
             else:
                 # Przejście do stanu WAIT
                 ack_counter = 0
-                comm.bcast("gREQ", root=rank)  # Wysyłka do każdego procesu
+                lamport_clock += 1 
+                comm.bcast(f"gREQ {lamport_clock}", root=rank)  # Wysyłka do każdego procesu
                 current_state = "WAIT"
 
         if current_state == "WAIT":
@@ -69,13 +71,20 @@ def gnome_code(comm, G, ac):
 
             for message in messages:
                 message_author = message[0]
-                message_type = message[1]
+                message_type = message[1].split()[0]
 
                 if message_type == "sREQ":
                     continue
 
-                elif message_type == "qREQ":
+                elif message_type == "gREQ":
                     # TO DO: Wykorzystać zegar Lamporta w wysyłaniu i odbieraniu wiadomości
+                    message_clock = int(message[1].split()[1])
+                    if lamport_clock < message_clock:
+                        lamport_clock = message_clock + 1
+                        comm.send("ACK", dest=message_author)
+                    else:   
+                        lamport_clock += 1 
+                        wait_queue.append(message_author)
 
                 elif message_type == "ACK":
                     ack_counter += 1
@@ -101,12 +110,12 @@ def gnome_code(comm, G, ac):
 
             for message in messages:
                 message_author = message[0]
-                message_type = message[1]
+                message_type = message[1].split()[0]
 
                 if message_type == "sREQ":
                     continue
 
-                elif message_type == "qREQ":
+                elif message_type == "gREQ":
                     wait_queue.append(message_author)
 
                 elif message_type == "ACK":
