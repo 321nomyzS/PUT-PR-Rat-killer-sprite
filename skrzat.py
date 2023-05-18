@@ -6,7 +6,8 @@ def get_messages(comm, rank, size):
     messages = []
     while True:
         status = MPI.Status()
-        if comm.iprobe(source=MPI.ANY_SOURCE, status=status):
+        #sprawdź czy jest wiadomość do odebrania od obojętnie kogo. Jak jest, to zapisz o niej informacje w 'status'
+        if comm.iprobe(source=MPI.ANY_SOURCE, status=status): 
             message = comm.recv(source=status.Get_source())
             print(f"[GNOM:{rank}] Otrzymałem wiadomość {message} od {status.Get_source()}")
             messages.append((status.Get_source(), message))
