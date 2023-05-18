@@ -4,14 +4,25 @@ from colorama import Fore
 
 def get_messages(comm, rank, size):
     messages = []
-    for i in range(size):
-        #status = MPI.Status()
-        #if comm.iprobe(source=i):
-        message = comm.recv(source=i)
-        if message is not None:
-            print(f"[SKRZAT:{rank}] Otrzymałem wiadomość {message} od {i}")
-            messages.append((i, message))
+    while True:
+        status = MPI.Status()
+        if comm.iprobe(source=MPI.ANY_SOURCE, status=status):
+            message = comm.recv(source=status.Get_source())
+            print(f"[GNOM:{rank}] Otrzymałem wiadomość {message} od {status.Get_source()}")
+            messages.append((status.Get_source(), message))
+        else:
+            break
     return messages
+
+    # messages = []
+    # for i in range(size):
+    #     #status = MPI.Status()
+    #     #if comm.iprobe(source=i):
+    #     message = comm.recv(source=i)
+    #     if message is not None:
+    #         print(f"[SKRZAT:{rank}] Otrzymałem wiadomość {message} od {i}")
+    #         messages.append((i, message))
+    # return messages
 
 def skrzat_code(comm, S, b):
     # Ustawianie zmiennych i struktur lokalnych

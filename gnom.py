@@ -4,12 +4,14 @@ from colorama import Fore
 
 def get_messages(comm, rank, size):
     messages = []
-    for i in range(size):
+    while True:
         status = MPI.Status()
-        if comm.iprobe(source=i, status=status):
-            message = comm.recv(source=i)
-            print(f"[GNOM:{rank}] Otrzymałem wiadomość {message} od {i}")
+        if comm.iprobe(source=MPI.ANY_SOURCE, status=status):
+            message = comm.recv(source=status.Get_source())
+            print(f"[GNOM:{rank}] Otrzymałem wiadomość {message} od {status.Get_source()}")
             messages.append((status.Get_source(), message))
+        else:
+            break
     return messages
 
 def gnome_code(comm, G, ac):
@@ -32,9 +34,8 @@ def gnome_code(comm, G, ac):
     while True:
         if current_state == "REST":
             print(f"[GNOM:{rank}|{lamport_clock}] Jestem w stanie REST")
-            messages = get_messages(comm, rank, size) # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
-            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
-
+            messages = get_messages(comm, rank, size) 
+            
             for message in messages:
                 message_author = message[0]
                 message_type = message[1].split()[0]
@@ -67,8 +68,7 @@ def gnome_code(comm, G, ac):
 
         if current_state == "WAIT":
             print(f"[GNOM:{rank}|{lamport_clock}] Jestem w stanie WAIT")
-            # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
-            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
+            
             while ack_counter < G - ac:
                 messages = get_messages(comm, rank, size)
                 for message in messages:
@@ -79,7 +79,6 @@ def gnome_code(comm, G, ac):
                         continue
 
                     elif message_type == "gREQ":
-                        # TO DO: Wykorzystać zegar Lamporta w wysyłaniu i odbieraniu wiadomości
                         message_clock = int(message[1].split()[1])
                         if lamport_clock <= message_clock:
                             lamport_clock = message_clock + 1
@@ -106,8 +105,7 @@ def gnome_code(comm, G, ac):
             comm.bcast("gCHG", root=rank)
             print(f"[GNOM:{rank}|{lamport_clock}] Wysyłam wiadomość gCHG do wszystkich procesów")
 
-            messages = get_messages(comm, rank, size)  # TO DO: Wiadomości powinny być odbierane w pętli do jakiegoś momentu.
-            # Możliwe, że wiadomość dojdzie do procesu w momencie, jak proces będzie linijkę niżej. Wtedy wiadomość nie zostanie uwzględniona
+            messages = get_messages(comm, rank, size)  
 
             for message in messages:
                 message_author = message[0]
